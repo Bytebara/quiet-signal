@@ -1,0 +1,274 @@
+/* Quiet Signal design tokens and base styles.
+   One accent color (--signal). Severity colors are only for alert data. */
+
+@import '@fontsource/public-sans/400.css';
+@import '@fontsource/public-sans/600.css';
+@import '@fontsource/public-sans/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  --ground: #131a23;
+  --surface: #1a2330;
+  --surface-2: #212c3b;
+  --rule: #2b3748;
+  --text: #dde4ec;
+  --muted: #93a1b2;
+  --signal: #86c8d8;
+  --signal-dim: #3d6672;
+
+  --sev-critical: #f07a66;
+  --sev-high: #e9a15a;
+  --sev-medium: #d9c46a;
+  --sev-low: #8fb0cc;
+  --sev-info: #93a1b2;
+
+  --ok: #8fcf9f;
+
+  --sans: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --measure: 70ch;
+  --wide: 76rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --radius-sm: 3px;
+  --radius: 6px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  font-feature-settings: 'kern', 'liga';
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4.2vw, 2.75rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-top: 2.25rem;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+p,
+ul,
+ol {
+  margin: 0 0 1rem;
+}
+
+a {
+  color: var(--signal);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--mono);
+  font-size: 0.875em;
+}
+
+:not(pre) > code {
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* Code highlighting (Prism classes) */
+.token.comment,
+.token.prolog {
+  color: #7d8a9a;
+}
+.token.keyword,
+.token.atrule,
+.token.boolean {
+  color: #c9a0dc;
+}
+.token.string,
+.token.attr-value {
+  color: #a8d4a0;
+}
+.token.number,
+.token.constant {
+  color: #e9b97a;
+}
+.token.function,
+.token.class-name {
+  color: var(--signal);
+}
+.token.key,
+.token.property,
+.token.atrule.key {
+  color: #8fb0cc;
+}
+.token.punctuation,
+.token.operator {
+  color: #a8b4c2;
+}
+.token.regex {
+  color: #e9b97a;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2.5rem 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.prose {
+  max-width: var(--measure);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.lead {
+  font-size: 1.2rem;
+  color: var(--text);
+  max-width: 60ch;
+}
+
+/* Prompt-style page label, e.g. "~/projects". The one terminal cue. */
+.path {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--signal);
+  margin: 0 0 0.75rem;
+}
+
+.path::before {
+  content: '$ ';
+  color: var(--muted);
+}
+
+/* Simulated-data banner: always visible on demos. */
+.sim-banner {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  border: 1px dashed var(--sev-medium);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 1.25rem 0;
+  font-size: 0.95rem;
+}
+
+.sim-banner strong {
+  color: var(--sev-medium);
+  white-space: nowrap;
+}
+
+/* Form controls */
+input[type='search'],
+input[type='text'],
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input[type='search'],
+input[type='text'],
+select,
+textarea {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  min-height: 2.5rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--signal-dim);
+}
+
+button {
+  cursor: pointer;
+}
+
+.btn {
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.85rem;
+  min-height: 2.5rem;
+}
+
+.btn:hover {
+  border-color: var(--signal-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

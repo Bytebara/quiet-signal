@@ -1,0 +1,10 @@
+---
+import Base from '../layouts/Base.astro';
+import { withBase } from '../config/site';
+---
+
+<Base title="Page not found">
+  <p class="path">cd: no such file or directory</p>
+  <h1>That page doesn’t exist.</h1>
+  <p>The link may be old. Go to the <a href={withBase('/')}>overview</a> or browse <a href={withBase('/projects/')}>projects</a>.</p>
+</Base>

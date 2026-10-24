@@ -1,0 +1,187 @@
+---
+import '../styles/global.css';
+import { site, nav, withBase } from '../config/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  wide?: boolean;
+}
+
+const { title, description = site.description, wide = false } = Astro.props;
+const pageTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.role}`;
+const current = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
+
+function isCurrent(href: string) {
+  if (href === '/') return current === '/';
+  return current.startsWith(href);
+}
+
+// Content-Security-Policy: only same-origin files, no inline scripts or styles,
+// no outbound connections, no forms. GitHub Pages cannot send headers, so it goes in a meta tag.
+const csp = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join('; ');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {import.meta.env.PROD && <meta http-equiv="Content-Security-Policy" content={csp} />}
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content={description} />
+    <meta name="author" content={site.name} />
+    <meta name="theme-color" content="#131a23" />
+    <link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml" />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="bar">
+        <a class="mark" href={withBase('/')} aria-label={`${site.name}, home`}>
+          <span class="dot" aria-hidden="true"></span>
+          <span>quiet signal</span>
+        </a>
+        <nav aria-label="Main">
+          <ul>
+            {
+              nav.map((item) => (
+                <li>
+                  <a href={withBase(item.href)} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class:list={['page', { wide }]}>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="bar">
+        <p>{site.colophon}</p>
+        <p>
+          <a href={withBase('/about-this-site/')}>Evidence labels and privacy</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: -999px;
+    top: 0.5rem;
+    background: var(--signal);
+    color: var(--ground);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    z-index: 10;
+  }
+  .skip:focus {
+    left: 0.5rem;
+  }
+
+  .bar {
+    max-width: var(--wide);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+  }
+
+  .site-header {
+    border-bottom: 1px solid var(--rule);
+  }
+  .site-header .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1rem;
+  }
+  .dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 0 3px rgba(134, 200, 216, 0.18);
+  }
+
+  nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+    padding: 0.35rem 0;
+    display: inline-block;
+    border-bottom: 2px solid transparent;
+  }
+  nav a:hover {
+    color: var(--text);
+  }
+  nav a[aria-current='page'] {
+    color: var(--text);
+    border-bottom-color: var(--signal);
+  }
+
+  .page {
+    max-width: var(--wide);
+    margin: 0 auto;
+    padding: 2.5rem var(--gutter) 4rem;
+    min-height: 70vh;
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+  .site-footer .bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
+  .site-footer p {
+    margin: 0;
+    max-width: 60ch;
+  }
+</style>

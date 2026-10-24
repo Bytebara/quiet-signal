@@ -1,0 +1,187 @@
+---
+// Searchable, filterable list of projects or write-ups.
+// Works without JavaScript (everything is listed); the script adds filtering.
+import EvidenceTag from './EvidenceTag.astro';
+import { collectTags } from '../lib/explore';
+import { evidenceLevels, type Evidence } from '../lib/evidence';
+
+interface Item {
+  id: string;
+  href: string;
+  title: string;
+  summary: string;
+  status: Evidence;
+  tags: string[];
+  meta?: string;
+}
+
+interface Props {
+  items: Item[];
+  label: string; // "projects" or "write-ups"
+}
+
+const { items, label } = Astro.props;
+const tags = collectTags(items);
+const statuses = [...new Set(items.map((i) => i.status))];
+---
+
+<div class="explorer" data-explorer>
+  <div class="controls" role="search" aria-label={`Filter ${label}`}>
+    <label>
+      <span>Search</span>
+      <input type="search" data-q maxlength="100" autocomplete="off" placeholder="Wazuh, phishing, T1110…" />
+    </label>
+    <label>
+      <span>Status</span>
+      <select data-status>
+        <option value="all">All</option>
+        {statuses.map((s) => <option value={s}>{evidenceLevels[s].label}</option>)}
+      </select>
+    </label>
+    <label>
+      <span>Topic</span>
+      <select data-tag>
+        <option value="all">All</option>
+        {tags.map((t) => <option value={t}>{t}</option>)}
+      </select>
+    </label>
+  </div>
+
+  <p class="count muted" data-count aria-live="polite">{items.length} {label}</p>
+
+  <ul class="items">
+    {
+      items.map((item) => (
+        <li
+          data-item
+          data-id={item.id}
+          data-title={item.title}
+          data-summary={item.summary}
+          data-status={item.status}
+          data-tags={item.tags.join('|')}
+        >
+          <div class="head">
+            <h3>
+              <a href={item.href}>{item.title}</a>
+            </h3>
+            <EvidenceTag level={item.status} />
+          </div>
+          <p>{item.summary}</p>
+          <p class="meta">
+            {item.meta && <span>{item.meta}</span>}
+            {item.tags.map((t) => (
+              <span class="topic">{t}</span>
+            ))}
+          </p>
+        </li>
+      ))
+    }
+  </ul>
+  <p class="empty" data-empty hidden>
+    Nothing matches those filters. Clear the search or set Status and Topic back to All.
+  </p>
+</div>
+
+<script>
+  import { filterItems, parseTagAttr, type ExploreItem } from '../lib/explore';
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-explorer]')) {
+    const q = root.querySelector<HTMLInputElement>('[data-q]');
+    const status = root.querySelector<HTMLSelectElement>('[data-status]');
+    const tag = root.querySelector<HTMLSelectElement>('[data-tag]');
+    const count = root.querySelector<HTMLElement>('[data-count]');
+    const empty = root.querySelector<HTMLElement>('[data-empty]');
+    const nodes = [...root.querySelectorAll<HTMLElement>('[data-item]')];
+    if (!q || !status || !tag || !count || !empty) continue;
+
+    const items: (ExploreItem & { el: HTMLElement })[] = nodes.map((el) => ({
+      el,
+      id: el.dataset.id ?? '',
+      title: el.dataset.title ?? '',
+      summary: el.dataset.summary ?? '',
+      status: el.dataset.status ?? '',
+      tags: parseTagAttr(el.dataset.tags),
+    }));
+    const noun = count.textContent?.replace(/^\d+\s*/, '') ?? '';
+
+    const update = () => {
+      const shown = new Set(filterItems(items, { query: q.value, status: status.value, tag: tag.value }));
+      for (const item of items) item.el.hidden = !shown.has(item);
+      count.textContent = `${shown.size} of ${items.length} ${noun}`;
+      empty.hidden = shown.size > 0;
+    };
+
+    q.addEventListener('input', update);
+    status.addEventListener('change', update);
+    tag.addEventListener('change', update);
+  }
+</script>
+
+<style>
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin: 1.5rem 0 0.5rem;
+  }
+  .controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .controls input {
+    min-width: min(20rem, 80vw);
+  }
+  .count {
+    font-size: 0.875rem;
+    margin: 0.75rem 0;
+  }
+  .items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .items li {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--rule);
+    max-width: var(--measure);
+  }
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.9rem;
+  }
+  .head h3 {
+    margin: 0;
+  }
+  .head a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .head a:hover {
+    color: var(--signal);
+    text-decoration: underline;
+  }
+  .items p {
+    margin: 0.4rem 0 0;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .topic {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+  .empty {
+    padding: 1.5rem 0;
+    color: var(--muted);
+  }
+</style>

@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro';
+import EvidenceTag from '../../components/EvidenceTag.astro';
+import { getCollection, render } from 'astro:content';
+import { withBase } from '../../config/site';
+import { evidenceLevels } from '../../lib/evidence';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('research');
+  return entries.map((e) => ({ params: { id: e.id }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+---
+
+<Base title={d.title} description={d.summary}>
+  <p class="path"><a href={withBase('/research/')}>~/research</a>/{entry.id}</p>
+  <article class="prose">
+    <h1>{d.title}</h1>
+    <p class="status">
+      <EvidenceTag level={d.status} />
+      <span class="muted">{d.kind}{d.date && `, ${d.date}`}. {evidenceLevels[d.status].meaning}</span>
+    </p>
+    {
+      d.status === 'simulated' && (
+        <div class="sim-banner" role="note">
+          <strong>Simulated</strong>
+          <span>Based on synthetic data from the SOC lab demo, not a real incident.</span>
+        </div>
+      )
+    }
+    <Content />
+  </article>
+</Base>
+
+<style>
+  .path a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .status {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: 0.925rem;
+  }
+  article :global(h2) {
+    font-size: 1.3rem;
+  }
+</style>

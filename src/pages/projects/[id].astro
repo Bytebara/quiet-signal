@@ -1,0 +1,81 @@
+---
+import Base from '../../layouts/Base.astro';
+import EvidenceTag from '../../components/EvidenceTag.astro';
+import SocAutomation from '../../components/diagrams/SocAutomation.astro';
+import TriageFlow from '../../components/diagrams/TriageFlow.astro';
+import { getCollection, render } from 'astro:content';
+import { withBase } from '../../config/site';
+import { evidenceLevels } from '../../lib/evidence';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((p) => ({ params: { id: p.id }, props: { project: p } }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const d = project.data;
+const diagrams = { 'soc-automation': SocAutomation, 'triage-flow': TriageFlow };
+const Diagram = d.diagram ? diagrams[d.diagram] : null;
+---
+
+<Base title={d.title} description={d.summary}>
+  <p class="path"><a href={withBase('/projects/')}>~/projects</a>/{project.id}</p>
+  <article class="prose">
+    <header>
+      <h1>{d.title}</h1>
+      <p class="status"><EvidenceTag level={d.status} /> <span class="muted">{evidenceLevels[d.status].meaning}</span></p>
+      <p class="lead">{d.summary}</p>
+      {
+        d.tools.length > 0 && (
+          <p class="tools">
+            <span class="muted">Tools: </span>
+            {d.tools.join(', ')}
+          </p>
+        )
+      }
+      {
+        d.demo && (
+          <p>
+            <a class="btn demo" href={withBase(d.demo)}>
+              Open the live demo
+            </a>
+          </p>
+        )
+      }
+    </header>
+  </article>
+
+  {Diagram && <Diagram />}
+
+  <article class="prose body">
+    <Content />
+  </article>
+</Base>
+
+<style>
+  .path a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .status {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: 0.925rem;
+  }
+  .tools {
+    font-family: var(--mono);
+    font-size: 0.875rem;
+  }
+  .demo {
+    display: inline-block;
+    text-decoration: none;
+    color: var(--text);
+    border-color: var(--signal-dim);
+  }
+  .body :global(h2) {
+    font-size: 1.3rem;
+  }
+</style>

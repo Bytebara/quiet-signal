@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import Explorer from '../../components/Explorer.astro';
+import { getCollection } from 'astro:content';
+import { withBase } from '../../config/site';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const items = projects.map((p) => ({
+  id: p.id,
+  href: withBase(`/projects/${p.id}/`),
+  title: p.data.title,
+  summary: p.data.summary,
+  status: p.data.status,
+  tags: p.data.tags,
+  meta: p.data.tools.join(', '),
+}));
+---
+
+<Base title="Projects" description="Security projects: SIEM, automation, threat intelligence and defensive tooling.">
+  <p class="path">ls ~/projects</p>
+  <h1>Projects</h1>
+  <p class="lead">
+    Security monitoring, automation and defensive tooling. Planned projects are listed so you can see the direction,
+    and they say plainly that nothing is built yet.
+  </p>
+  <Explorer items={items} label="projects" />
+</Base>

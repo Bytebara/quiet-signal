@@ -1,0 +1,60 @@
+# Publishes the site to GitHub Pages.
+# It only runs when you start it by hand (Actions tab > Deploy > Run workflow),
+# so nothing goes public by accident. Read README > "Publishing safely" first.
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:privacy
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+      # Custom domain: set a repository variable CUSTOM_DOMAIN (Settings > Secrets and variables >
+      # Actions > Variables), e.g. quietsignal.dev. Leave it unset to use <owner>.github.io.
+      SITE_URL: ${{ vars.CUSTOM_DOMAIN && format('https://{0}', vars.CUSTOM_DOMAIN) || format('https://{0}.github.io', github.repository_owner) }}
+      # "/" for a custom domain or a repo named <owner>.github.io, otherwise "/<repo-name>/"
+      SITE_BASE: ${{ (vars.CUSTOM_DOMAIN || github.event.repository.name == format('{0}.github.io', github.repository_owner)) && '/' || format('/{0}/', github.event.repository.name) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: withastro/action@v6
+        with:
+          node-version: 22
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

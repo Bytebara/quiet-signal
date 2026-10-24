@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import Explorer from '../../components/Explorer.astro';
+import { getCollection } from 'astro:content';
+import { withBase } from '../../config/site';
+
+const entries = (await getCollection('research')).sort((a, b) => (b.data.date ?? '').localeCompare(a.data.date ?? ''));
+const items = entries.map((e) => ({
+  id: e.id,
+  href: withBase(`/research/${e.id}/`),
+  title: e.data.title,
+  summary: e.data.summary,
+  status: e.data.status,
+  tags: e.data.tags,
+  meta: e.data.date ? `${e.data.kind}, ${e.data.date}` : e.data.kind,
+}));
+---
+
+<Base title="Research" description="Investigations, lab exercises, detection logic and lessons learned.">
+  <p class="path">ls ~/research</p>
+  <h1>Research and write-ups</h1>
+  <p class="lead">
+    Investigations, lab notes and detection logic. Simulated write-ups use the synthetic data from the SOC lab; planned
+    ones are placeholders until the work behind them is done.
+  </p>
+  <Explorer items={items} label="write-ups" />
+</Base>

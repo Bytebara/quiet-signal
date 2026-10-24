@@ -1,0 +1,111 @@
+---
+// Architecture of the SOC automation lab: event to case.
+const boxes = [
+  { x: 10, title: 'Windows endpoint', sub: 'Sysmon telemetry' },
+  { x: 190, title: 'Wazuh', sub: 'agent → manager rules' },
+  { x: 370, title: 'Shuffle', sub: 'SOAR workflow' },
+  { x: 550, title: 'TheHive', sub: 'case created' },
+  { x: 730, title: 'Analyst', sub: 'triage with context' },
+];
+const W = 160;
+const Y = 140;
+const H = 72;
+---
+
+<figure class="diagram">
+  <div class="scroll">
+    <svg viewBox="0 0 900 240" role="img" aria-labelledby="soc-arch-title soc-arch-desc">
+      <title id="soc-arch-title">SOC automation lab architecture</title>
+      <desc id="soc-arch-desc">
+        Sysmon events from a Windows endpoint go to Wazuh. Matching alerts are sent to Shuffle, which looks up file
+        hashes with the VirusTotal API and then opens a case in TheHive for an analyst.
+      </desc>
+      <defs>
+        <marker id="arrow-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"></path>
+        </marker>
+      </defs>
+
+      <!-- external service -->
+      <rect x="370" y="14" width={W} height="60" rx="6" class="box ext"></rect>
+      <text x="450" y="40" class="t1" text-anchor="middle">VirusTotal API</text>
+      <text x="450" y="60" class="t2" text-anchor="middle">hash reputation</text>
+      <line x1="435" y1={Y} x2="435" y2="78" class="flow" marker-end="url(#arrow-a)"></line>
+      <line x1="465" y1="74" x2="465" y2={Y - 4} class="flow" marker-end="url(#arrow-a)"></line>
+      <text x="425" y="110" class="t3" text-anchor="end">lookup</text>
+      <text x="475" y="110" class="t3">verdict</text>
+
+      {
+        boxes.map((b) => (
+          <g>
+            <rect x={b.x} y={Y} width={W} height={H} rx="6" class="box" />
+            <text x={b.x + W / 2} y={Y + 30} class="t1" text-anchor="middle">
+              {b.title}
+            </text>
+            <text x={b.x + W / 2} y={Y + 52} class="t2" text-anchor="middle">
+              {b.sub}
+            </text>
+          </g>
+        ))
+      }
+      {
+        boxes.slice(0, -1).map((b) => (
+          <line x1={b.x + W} y1={Y + H / 2} x2={b.x + 180 - 2} y2={Y + H / 2} class="flow" marker-end="url(#arrow-a)" />
+        ))
+      }
+    </svg>
+  </div>
+  <figcaption>From endpoint event to analyst case. Shuffle does the first lookup so the case arrives with context.</figcaption>
+</figure>
+
+<style>
+  .diagram {
+    margin: 1.5rem 0 2rem;
+  }
+  .scroll {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 1rem;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    min-width: 640px;
+    height: auto;
+  }
+  .box {
+    fill: var(--surface-2);
+    stroke: var(--rule);
+    stroke-width: 1.5;
+  }
+  .box.ext {
+    stroke-dasharray: 5 4;
+    stroke: var(--muted);
+  }
+  .t1 {
+    fill: var(--text);
+    font: 600 15px var(--sans);
+  }
+  .t2 {
+    fill: var(--muted);
+    font: 12px var(--mono);
+  }
+  .t3 {
+    fill: var(--muted);
+    font: 12px var(--mono);
+  }
+  .flow {
+    stroke: var(--signal);
+    stroke-width: 1.5;
+  }
+  .arrowhead {
+    fill: var(--signal);
+  }
+  figcaption {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.6rem;
+  }
+</style>

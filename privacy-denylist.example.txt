@@ -1,0 +1,12 @@
+# Copy this file to privacy-denylist.txt and fill in your own terms.
+# privacy-denylist.txt is listed in .gitignore and is never committed.
+# One term per line. Matching ignores upper/lower case.
+# Include every format you use: "5551234567", "555-123-4567", "(555) 123-4567".
+#
+# Your first name
+# Your last name
+# Personal email address
+# Other email addresses
+# Phone number (each format)
+# Street name and building number
+# Usernames you use on other sites

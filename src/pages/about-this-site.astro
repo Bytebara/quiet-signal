@@ -1,0 +1,61 @@
+---
+import Base from '../layouts/Base.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { evidenceLevels, type Evidence } from '../lib/evidence';
+
+const levels = Object.keys(evidenceLevels) as Evidence[];
+---
+
+<Base title="About this site" description="Evidence labels, privacy and how this site is built.">
+  <p class="path">cat ~/README</p>
+  <article class="prose">
+    <h1>About this site</h1>
+
+    <h2>Evidence labels</h2>
+    <dl>
+      {
+        levels.map((l) => (
+          <>
+            <dt>
+              <EvidenceTag level={l} />
+            </dt>
+            <dd>{evidenceLevels[l].meaning}</dd>
+          </>
+        ))
+      }
+    </dl>
+
+    <h2>Privacy for visitors</h2>
+    <ul>
+      <li>No cookies, analytics, tracking pixels, embedded third-party content or forms.</li>
+      <li>Fonts and scripts are served from this site only. The page sets a Content-Security-Policy that blocks outside requests.</li>
+      <li>
+        The host, GitHub Pages, may keep standard server logs such as IP addresses. That’s outside this site’s control.
+      </li>
+    </ul>
+
+    <h2>Why a project name instead of a personal name</h2>
+    <p>
+      This portfolio is published under a project name to keep personal contact details off the public web. Employers
+      reach me through the job application where I share the link.
+    </p>
+
+    <h2>How it’s built</h2>
+    <p>
+      A static site generated with Astro and TypeScript. The interactive pieces are small scripts with unit tests. The
+      demos run entirely in your browser on synthetic data.
+    </p>
+  </article>
+</Base>
+
+<style>
+  dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.6rem 1rem;
+    align-items: baseline;
+  }
+  dd {
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,152 @@
+---
+import Base from '../layouts/Base.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { getCollection } from 'astro:content';
+import { withBase } from '../config/site';
+import { evidenceLevels, type Evidence } from '../lib/evidence';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const featured = projects.filter((p) => p.data.status !== 'planned').slice(0, 3);
+const next = projects.filter((p) => p.data.status === 'planned');
+const legend: Evidence[] = ['applied', 'explored', 'learning', 'simulated', 'planned'];
+---
+
+<Base>
+  <section class="hero">
+    <p class="path">whoami</p>
+    <h1>Entry-level security operations, with the evidence labeled.</h1>
+    <div class="prose">
+      <p class="lead">
+        I’m working toward a SOC analyst or IT security role. My background is front-line technical support: diagnosing
+        faults under time pressure, documenting every device that comes through intake, and explaining fixes to people
+        who aren’t technical.
+      </p>
+      <p>
+        Alongside that I’m studying cybersecurity and spending lab time on the parts of the job I want to do next:
+        security monitoring, threat detection, incident response, threat intelligence and automating the repetitive
+        first steps of triage.
+      </p>
+    </div>
+  </section>
+
+  <section class="legend" aria-labelledby="legend-h">
+    <h2 id="legend-h">How to read this site</h2>
+    <p class="muted prose">
+      Every skill, project and write-up carries one label, so you can see at a glance what’s been used for real and
+      what’s still in progress.
+    </p>
+    <dl>
+      {
+        legend.map((level) => (
+          <div>
+            <dt>
+              <EvidenceTag level={level} />
+            </dt>
+            <dd>{evidenceLevels[level].meaning}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section aria-labelledby="work-h">
+    <h2 id="work-h">Work to look at first</h2>
+    <ul class="featured">
+      {
+        featured.map((p) => (
+          <li>
+            <div class="row">
+              <h3>
+                <a href={withBase(`/projects/${p.id}/`)}>{p.data.title}</a>
+              </h3>
+              <EvidenceTag level={p.data.status} />
+            </div>
+            <p>{p.data.summary}</p>
+            {p.data.demo && (
+              <p>
+                <a href={withBase(p.data.demo)}>Open the live demo</a>
+              </p>
+            )}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section aria-labelledby="next-h">
+    <h2 id="next-h">Building next</h2>
+    <ul class="next">
+      {
+        next.map((p) => (
+          <li>
+            <a href={withBase(`/projects/${p.id}/`)}>{p.data.title}</a>
+            <span class="muted">{p.data.summary}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    padding: 1.5rem 0 1rem;
+  }
+  .hero h1 {
+    max-width: 22ch;
+    margin-bottom: 1.25rem;
+  }
+  .legend dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.9rem 1.5rem;
+    margin: 1rem 0 0;
+  }
+  .legend dl > div {
+    border-top: 1px solid var(--rule);
+    padding-top: 0.75rem;
+  }
+  .legend dd {
+    margin: 0.45rem 0 0;
+    color: var(--muted);
+    font-size: 0.925rem;
+  }
+  .featured {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1.5rem;
+  }
+  .featured li {
+    border-top: 2px solid var(--signal-dim);
+    padding-top: 1rem;
+  }
+  .featured .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+    align-items: baseline;
+  }
+  .featured h3 {
+    margin: 0;
+  }
+  .featured h3 a {
+    color: var(--text);
+  }
+  .featured p {
+    margin: 0.5rem 0 0;
+  }
+  .next {
+    padding: 0;
+    list-style: none;
+    max-width: var(--measure);
+  }
+  .next li {
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+</style>

@@ -1,0 +1,94 @@
+---
+import Base from '../layouts/Base.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { degree, degreeStatusLabel } from '../data/education';
+import { site, withBase } from '../config/site';
+
+const statusText = degreeStatusLabel(degree.degreeStatus, degree.conferredYear);
+---
+
+<Base title="Education" description="Cybersecurity education and hands-on professional development.">
+  <p class="path">cat ~/education</p>
+  <h1>Education and development</h1>
+
+  <section class="degree prose" aria-labelledby="deg-h">
+    <h2 id="deg-h">{degree.credential}</h2>
+    <p class="org">{degree.school}</p>
+    <p class="when">
+      {statusText ? `${degree.years}, ${statusText.toLowerCase()}` : degree.years}
+    </p>
+    <ul>
+      {degree.notes.map((n) => <li>{n}</li>)}
+    </ul>
+    <p class="muted">{degree.nextStep}</p>
+  </section>
+
+  <section class="prose" aria-labelledby="dev-h">
+    <h2 id="dev-h">Hands-on learning</h2>
+    <ul class="dev">
+      <li>
+        <div class="row"><span>TryHackMe guided security labs</span><EvidenceTag level="explored" /></div>
+        <p class="muted">Room notes will be published in the research section as they’re written up.</p>
+      </li>
+      <li>
+        <div class="row">
+          <a href={withBase('/projects/soc-automation-lab/')}>SOC automation lab (Wazuh, TheHive, Shuffle, Sysmon)</a>
+          <EvidenceTag level="explored" />
+        </div>
+        <p class="muted">Explored hands-on; the documented write-up is planned.</p>
+      </li>
+      <li>
+        <div class="row"><span>Python for security automation</span><EvidenceTag level="learning" /></div>
+        <p class="muted">First project planned: an alert-enrichment script.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="prose" aria-labelledby="cert-h">
+    <h2 id="cert-h">Certifications</h2>
+    <p>No certifications to list yet. Any added here will link to a verification page from the issuer.</p>
+  </section>
+
+  {
+    site.resumeFile && (
+      <section class="prose">
+        <h2>Resume</h2>
+        <p>
+          <a href={withBase(`/${site.resumeFile}`)} download>
+            Download resume (PDF)
+          </a>
+        </p>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .org {
+    color: var(--signal);
+    margin: 0;
+  }
+  .when {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .dev {
+    list-style: none;
+    padding: 0;
+  }
+  .dev li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dev p {
+    margin: 0.2rem 0 0;
+    font-size: 0.9rem;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+</style>

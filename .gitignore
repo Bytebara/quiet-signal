@@ -1,0 +1,23 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# private: never commit
+privacy-denylist.txt
+.env
+.env.*
+*.pem
+*.key
+
+# your original resume and other personal documents
+*.pdf
+
+# editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,508 @@
+---
+// Simulated SOC alert queue. The table is rendered on the server, so it's readable
+// without JavaScript; the script adds filtering, sorting and the triage panel.
+import { alerts } from '../data/alerts';
+import { countBySeverity, formatTime, severities, sortAlerts, uniqueSources } from '../lib/alerts';
+
+const sorted = sortAlerts(alerts, 'severity');
+const counts = countBySeverity(alerts);
+const sources = uniqueSources(alerts);
+const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+---
+
+<section class="dash" data-dashboard aria-label="Simulated alert queue">
+  <div class="sev-strip" role="group" aria-label="Filter by severity">
+    {
+      severities.map((s) => (
+        <button type="button" class={`sev-toggle sev-${s}`} data-sev={s} aria-pressed="false">
+          <span class="n">{counts[s]}</span>
+          <span>{label(s)}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="controls">
+    <label>
+      <span>Search alerts</span>
+      <input type="search" data-q maxlength="100" autocomplete="off" placeholder="host, user, IP, T1110…" />
+    </label>
+    <label>
+      <span>Status</span>
+      <select data-status>
+        <option value="all">All</option>
+        <option value="new">New</option>
+        <option value="investigating">Investigating</option>
+        <option value="closed">Closed</option>
+      </select>
+    </label>
+    <label>
+      <span>Log source</span>
+      <select data-source>
+        <option value="all">All</option>
+        {sources.map((s) => <option value={s}>{s}</option>)}
+      </select>
+    </label>
+    <label>
+      <span>Sort</span>
+      <select data-sort>
+        <option value="severity">Severity</option>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+      </select>
+    </label>
+    <button type="button" class="btn reset" data-reset>Clear filters</button>
+  </div>
+
+  <p class="count muted" data-count aria-live="polite">{alerts.length} alerts</p>
+
+  <div class="layout">
+    <div class="queue">
+      <table>
+        <caption class="visually-hidden">Alert queue. Choose an alert to open it in the triage panel.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Severity</th>
+            <th scope="col" class="c-time">Time (UTC)</th>
+            <th scope="col">Alert</th>
+            <th scope="col" class="c-host">Host</th>
+            <th scope="col" class="c-status">Status</th>
+          </tr>
+        </thead>
+        <tbody data-rows>
+          {
+            sorted.map((a) => (
+              <tr data-id={a.id}>
+                <td>
+                  <span class={`sev sev-${a.severity}`}>{label(a.severity)}</span>
+                </td>
+                <td class="c-time mono">{formatTime(a.time).replace(' UTC', '')}</td>
+                <td>
+                  <button type="button" class="open" data-open={a.id} aria-controls="triage-panel">
+                    <span class="mono id">{a.id}</span> {a.rule}
+                  </button>
+                </td>
+                <td class="c-host mono">{a.host}</td>
+                <td class="c-status">{label(a.status)}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <p class="empty" data-empty hidden>
+        No alerts match. Clear the search or press Clear filters to see the whole queue.
+      </p>
+    </div>
+
+    <aside id="triage-panel" class="panel" data-panel tabindex="-1" aria-live="polite" aria-label="Triage panel">
+      <p class="muted placeholder">
+        Choose an alert from the queue. You'll see the raw event first, make your own call, then compare it with the
+        analyst notes.
+      </p>
+    </aside>
+  </div>
+</section>
+
+<script>
+  import { alerts } from '../data/alerts';
+  import {
+    filterAlerts,
+    formatTime,
+    isSeverity,
+    sortAlerts,
+    type Alert,
+    type Disposition,
+    type Severity,
+    type SortKey,
+  } from '../lib/alerts';
+
+  const root = document.querySelector<HTMLElement>('[data-dashboard]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const q = root.querySelector<HTMLInputElement>('[data-q]')!;
+    const status = root.querySelector<HTMLSelectElement>('[data-status]')!;
+    const source = root.querySelector<HTMLSelectElement>('[data-source]')!;
+    const sort = root.querySelector<HTMLSelectElement>('[data-sort]')!;
+    const tbody = root.querySelector<HTMLElement>('[data-rows]')!;
+    const count = root.querySelector<HTMLElement>('[data-count]')!;
+    const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+    const panel = root.querySelector<HTMLElement>('[data-panel]')!;
+    const sevButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-sev]')];
+    const rows = new Map<string, HTMLElement>();
+    for (const tr of tbody.querySelectorAll<HTMLElement>('tr[data-id]')) rows.set(tr.dataset.id!, tr);
+
+    const activeSeverities = (): Severity[] =>
+      sevButtons
+        .filter((b) => b.getAttribute('aria-pressed') === 'true')
+        .map((b) => b.dataset.sev)
+        .filter(isSeverity);
+
+    function update() {
+      const visible = sortAlerts(
+        filterAlerts(alerts, {
+          severities: activeSeverities(),
+          status: status.value as never,
+          source: source.value,
+          query: q.value,
+        }),
+        sort.value as SortKey,
+      );
+      const visibleIds = new Set(visible.map((a) => a.id));
+      // Re-append in sorted order, hide the rest.
+      for (const a of visible) {
+        const tr = rows.get(a.id);
+        if (tr) tbody.appendChild(tr);
+      }
+      for (const [id, tr] of rows) tr.hidden = !visibleIds.has(id);
+      count.textContent = `${visible.length} of ${alerts.length} alerts`;
+      empty.hidden = visible.length > 0;
+    }
+
+    sevButtons.forEach((b) =>
+      b.addEventListener('click', () => {
+        b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+        update();
+      }),
+    );
+    q.addEventListener('input', update);
+    [status, source, sort].forEach((el) => el.addEventListener('change', update));
+    root.querySelector('[data-reset]')?.addEventListener('click', () => {
+      q.value = '';
+      status.value = 'all';
+      source.value = 'all';
+      sort.value = 'severity';
+      sevButtons.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      update();
+    });
+
+    tbody.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-open]');
+      if (!button) return;
+      const alert = alerts.find((a) => a.id === button.dataset.open);
+      if (!alert) return;
+      for (const tr of rows.values()) tr.classList.toggle('selected', tr.dataset.id === alert.id);
+      renderPanel(panel, alert);
+      if (window.matchMedia('(max-width: 60rem)').matches) panel.scrollIntoView({ block: 'start' });
+      panel.focus({ preventScroll: true });
+    });
+  }
+
+  // Small DOM helper. Everything goes in through textContent, never innerHTML,
+  // so nothing in the data can be interpreted as markup.
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: { class?: string; text?: string } = {}, ...children: Node[]) {
+    const node = document.createElement(tag);
+    if (props.class) node.className = props.class;
+    if (props.text !== undefined) node.textContent = props.text;
+    node.append(...children);
+    return node;
+  }
+
+  const choices: Disposition[] = ['True positive', 'Escalate', 'Benign true positive', 'False positive'];
+  // "True positive" and "Escalate" both mean "this is real, act on it".
+  const sameCall = (a: Disposition, b: Disposition) => {
+    const real = (d: Disposition) => d === 'True positive' || d === 'Escalate';
+    return a === b || (real(a) && real(b));
+  };
+
+  function renderPanel(panel: HTMLElement, a: Alert) {
+    panel.replaceChildren();
+
+    panel.append(
+      el('p', { class: 'mono pid', text: `${a.id}   ${formatTime(a.time)}` }),
+      el('h3', { text: a.rule }),
+    );
+
+    const facts = el('dl', { class: 'facts' });
+    const add = (k: string, v: string) => facts.append(el('dt', { text: k }), el('dd', { text: v }));
+    add('Severity', a.severity.charAt(0).toUpperCase() + a.severity.slice(1));
+    add('Source', a.source);
+    add('Host', a.host);
+    add('User', a.user);
+    add('ATT&CK', `${a.mitre.id} ${a.mitre.name} (${a.mitre.tactic})`);
+    panel.append(facts);
+
+    panel.append(el('h4', { text: 'Raw event' }));
+    panel.append(el('pre', { class: 'raw', text: JSON.stringify(a.raw, null, 2) }));
+
+    const call = el('div', { class: 'call' });
+    call.append(el('h4', { text: 'Your call' }));
+    const group = el('div', { class: 'choices' });
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Choose a disposition');
+    const result = el('div', { class: 'result' });
+
+    for (const choice of choices) {
+      const b = el('button', { class: 'btn', text: choice });
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        b.classList.add('chosen');
+        b.setAttribute('aria-pressed', 'true');
+        reveal(choice);
+      });
+      group.append(b);
+    }
+    const skip = el('button', { class: 'linkish', text: 'Skip and show the analyst notes' });
+    skip.type = 'button';
+    skip.addEventListener('click', () => reveal(null));
+    call.append(group, skip, result);
+    panel.append(call);
+
+    function reveal(choice: Disposition | null) {
+      group.querySelectorAll('button').forEach((b) => (b.disabled = true));
+      skip.remove();
+      result.replaceChildren();
+      if (choice) {
+        const match = sameCall(choice, a.triage.disposition);
+        result.append(
+          el('p', {
+            class: match ? 'verdict ok' : 'verdict miss',
+            text: match
+              ? `Matches the analyst call: ${a.triage.disposition}.`
+              : `You chose ${choice}. The analyst call was ${a.triage.disposition}.`,
+          }),
+        );
+      } else {
+        result.append(el('p', { class: 'verdict', text: `Analyst call: ${a.triage.disposition}.` }));
+      }
+      result.append(el('h4', { text: 'Why' }), el('p', { text: a.triage.reasoning }));
+      const steps = el('ol');
+      a.triage.nextSteps.forEach((s) => steps.append(el('li', { text: s })));
+      result.append(el('h4', { text: 'Next steps' }), steps);
+    }
+  }
+</script>
+
+<style>
+  .sev-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+  }
+  .sev-toggle {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid currentColor;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.85rem;
+    min-height: 2.75rem;
+    color: var(--text);
+  }
+  .sev-toggle .n {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+  .sev-toggle[aria-pressed='true'] {
+    background: var(--surface-2);
+    border-color: currentColor;
+    outline: 1px solid currentColor;
+  }
+  .sev-toggle.sev-critical { border-left-color: var(--sev-critical); }
+  .sev-toggle.sev-high { border-left-color: var(--sev-high); }
+  .sev-toggle.sev-medium { border-left-color: var(--sev-medium); }
+  .sev-toggle.sev-low { border-left-color: var(--sev-low); }
+  .sev-toggle.sev-informational { border-left-color: var(--sev-info); }
+  .sev-toggle.sev-critical[aria-pressed='true'] { border-color: var(--sev-critical); }
+  .sev-toggle.sev-high[aria-pressed='true'] { border-color: var(--sev-high); }
+  .sev-toggle.sev-medium[aria-pressed='true'] { border-color: var(--sev-medium); }
+  .sev-toggle.sev-low[aria-pressed='true'] { border-color: var(--sev-low); }
+  .sev-toggle.sev-informational[aria-pressed='true'] { border-color: var(--sev-info); }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1rem;
+  }
+  .controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .controls input {
+    min-width: min(18rem, 80vw);
+  }
+  .count {
+    font-size: 0.875rem;
+    margin: 0.85rem 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 60rem) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.925rem;
+  }
+  th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 0.5rem 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  td {
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tr.selected td {
+    background: var(--surface-2);
+  }
+  .mono {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+  }
+  .open {
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .open:hover {
+    color: var(--signal);
+    text-decoration: underline;
+  }
+  .open .id {
+    color: var(--muted);
+    margin-right: 0.3rem;
+  }
+  .sev {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid currentColor;
+  }
+  .sev-critical { color: var(--sev-critical); }
+  .sev-high { color: var(--sev-high); }
+  .sev-medium { color: var(--sev-medium); }
+  .sev-low { color: var(--sev-low); }
+  .sev-informational { color: var(--sev-info); }
+  .sev-toggle { color: var(--text); }
+
+  .c-time,
+  .c-host {
+    white-space: nowrap;
+  }
+  @media (max-width: 40rem) {
+    .c-time,
+    .c-host {
+      display: none;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  @media (max-width: 60rem) {
+    .panel {
+      position: static;
+      max-height: none;
+    }
+  }
+  .panel :global(.pid) {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 0 0 0.4rem;
+    white-space: pre;
+  }
+  .panel :global(h3) {
+    margin-bottom: 0.9rem;
+  }
+  .panel :global(h4) {
+    font-size: 0.95rem;
+    margin: 1.1rem 0 0.4rem;
+  }
+  .panel :global(.facts) {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 0.9rem;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .panel :global(dt) {
+    color: var(--muted);
+  }
+  .panel :global(dd) {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .panel :global(.raw) {
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: 0;
+  }
+  .panel :global(.choices) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .panel :global(.choices .btn:disabled) {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .panel :global(.choices .btn.chosen) {
+    opacity: 1;
+    border-color: var(--signal);
+    color: var(--text);
+  }
+  .panel :global(.linkish) {
+    background: none;
+    border: 0;
+    padding: 0.5rem 0;
+    color: var(--signal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-size: 0.9rem;
+  }
+  .panel :global(.verdict) {
+    margin: 1rem 0 0;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--signal);
+    background: var(--surface-2);
+  }
+  .panel :global(.verdict.ok) {
+    border-left-color: var(--ok);
+  }
+  .panel :global(.verdict.miss) {
+    border-left-color: var(--sev-high);
+  }
+  .panel :global(ol) {
+    padding-left: 1.25rem;
+  }
+  .empty {
+    color: var(--muted);
+    padding: 1rem 0;
+  }
+</style>

@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro';
+import AlertDashboard from '../components/AlertDashboard.astro';
+import TriageFlow from '../components/diagrams/TriageFlow.astro';
+import { withBase } from '../config/site';
+---
+
+<Base title="SOC lab" description="Simulated SOC alert queue with synthetic data. Pick an alert, make your call, compare with analyst notes." wide>
+  <p class="path">./soc-lab --simulated</p>
+  <h1>SOC lab</h1>
+  <p class="lead">
+    An alert queue from a made-up company. Open an alert, read the raw event, decide what it is, then compare your call
+    with the analyst notes. Several alerts are connected; finding the links is part of the exercise.
+  </p>
+
+  <div class="sim-banner" role="note">
+    <strong>Simulated environment</strong>
+    <span>
+      All alerts, hosts, accounts and addresses are synthetic. IP addresses use ranges reserved for documentation, and
+      domains use example names. Nothing here comes from a real network.
+    </span>
+  </div>
+
+  <AlertDashboard />
+
+  <details class="how">
+    <summary>How the triage works</summary>
+    <TriageFlow />
+    <p class="prose">
+      The data, filtering logic and tests are described on the <a href={withBase('/projects/soc-alert-dashboard/')}
+        >project page</a
+      >. A full walkthrough of one alert is in the write-up <a href={withBase('/research/brute-force-then-success/')}
+        >Brute force followed by a successful logon</a
+      >.
+    </p>
+  </details>
+</Base>
+
+<style>
+  .how {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .how summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.5rem 0;
+  }
+</style>

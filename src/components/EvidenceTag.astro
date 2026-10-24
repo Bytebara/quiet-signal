@@ -1,0 +1,46 @@
+---
+import { evidenceLevels, type Evidence } from '../lib/evidence';
+
+interface Props {
+  level: Evidence;
+}
+
+const { level } = Astro.props;
+const info = evidenceLevels[level];
+---
+
+<span class={`tag tag-${level}`} title={info.meaning}>{info.label}</span>
+
+<style>
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0.3rem 0.45rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid currentColor;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .tag-applied,
+  .tag-completed {
+    color: var(--ok);
+  }
+  .tag-in-progress,
+  .tag-explored {
+    color: var(--signal);
+  }
+  .tag-learning {
+    color: var(--sev-low);
+    border-style: dashed;
+  }
+  .tag-planned {
+    color: var(--muted);
+    border-style: dotted;
+  }
+  .tag-simulated {
+    color: var(--sev-medium);
+    border-style: dashed;
+  }
+</style>

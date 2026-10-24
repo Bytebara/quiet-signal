@@ -1,0 +1,74 @@
+---
+import Base from '../layouts/Base.astro';
+import EvidenceTag from '../components/EvidenceTag.astro';
+import { skillGroups } from '../data/skills';
+import { withBase } from '../config/site';
+---
+
+<Base title="Skills" description="Technical skills grouped by area, each labeled Applied, Explored or Learning.">
+  <p class="path">ls ~/skills</p>
+  <h1>Skills</h1>
+  <p class="lead">
+    Grouped by the work they support. The label says how each one was gained, and the note says where. Anything not
+    yet used for real is marked Learning.
+  </p>
+
+  <div class="groups">
+    {
+      skillGroups.map((g) => (
+        <section aria-labelledby={`g-${g.title}`}>
+          <h2 id={`g-${g.title}`}>{g.title}</h2>
+          <ul>
+            {g.skills.map((s) => (
+              <li>
+                <div class="row">
+                  <span class="name">{s.link ? <a href={withBase(s.link)}>{s.name}</a> : s.name}</span>
+                  <EvidenceTag level={s.level} />
+                </div>
+                <p class="muted">{s.basis}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    gap: 0 3rem;
+  }
+  @media (max-width: 30rem) {
+    .groups {
+      grid-template-columns: 1fr;
+    }
+  }
+  h2 {
+    font-size: 1.15rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    padding: 0.55rem 0;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  .name a {
+    color: var(--text);
+  }
+  li p {
+    margin: 0.15rem 0 0;
+    font-size: 0.9rem;
+  }
+</style>
