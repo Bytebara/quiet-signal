@@ -5,12 +5,12 @@ import { skillGroups } from '../data/skills';
 import { withBase } from '../config/site';
 ---
 
-<Base title="Skills" description="Technical skills grouped by area, each labeled Applied, Explored or Learning.">
+<Base title="Skills" description="Technical skills grouped by area, each labeled Applied, Explored, Learning or Planned.">
   <p class="path">ls ~/skills</p>
   <h1>Skills</h1>
   <p class="lead">
     Grouped by the work they support. The label says how each one was gained, and the note says where. Anything not
-    yet used for real is marked Learning.
+    yet used for real is marked Learning, and what I’m working toward next is marked Planned.
   </p>
 
   <div class="groups">
@@ -22,7 +22,7 @@ import { withBase } from '../config/site';
             {g.skills.map((s) => (
               <li>
                 <div class="row">
-                  <span class="name">{s.link ? <a href={withBase(s.link)}>{s.name}</a> : s.name}</span>
+                  <span class="name">{s.link ? <a href={s.link.startsWith('https://') ? s.link : withBase(s.link)}>{s.name}</a> : s.name}</span>
                   <EvidenceTag level={s.level} />
                 </div>
                 <p class="muted">{s.basis}</p>
