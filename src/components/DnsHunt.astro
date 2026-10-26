@@ -1,0 +1,501 @@
+---
+// DNS hunt demo. The table is rendered on the server, so it's readable without
+// JavaScript; the script adds the lead filters, the hunt panel and the score.
+import { lookups } from '../data/dns';
+import { leadKeys, leads, leadsFor } from '../lib/dns';
+
+const hits = Object.fromEntries(leadKeys.map((k) => [k, lookups.filter((l) => leads[k].test(l)).length]));
+---
+
+<section class="hunt" data-hunt aria-label="Simulated DNS hunt">
+  <div class="leads" role="group" aria-label="Hunting leads: show only lookups that match">
+    {
+      leadKeys.map((k) => (
+        <button type="button" class="lead" data-lead={k} aria-pressed="false">
+          <span class="n">{hits[k]}</span>
+          <span>{leads[k].label}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="bar">
+    <p class="count muted" data-count aria-live="polite">{lookups.length} names</p>
+    <p class="score" data-score aria-live="polite">Judged 0 of {lookups.length}</p>
+    <button type="button" class="btn reset" data-reset>Start over</button>
+  </div>
+
+  <div class="layout">
+    <div class="queue">
+      <table>
+        <caption class="visually-hidden">
+          DNS lookups from one day on a made-up home network. Choose a name to investigate it.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Name looked up</th>
+            <th scope="col" class="c-dev">Device</th>
+            <th scope="col" class="c-num">Per day</th>
+            <th scope="col" class="c-res">Answer</th>
+            <th scope="col">Your call</th>
+          </tr>
+        </thead>
+        <tbody data-rows>
+          {
+            lookups.map((l) => (
+              <tr data-id={l.id}>
+                <td>
+                  <button type="button" class="open" data-open={l.id} aria-controls="hunt-panel">
+                    <span class="mono domain">{l.domain}</span>
+                    <span class="tags">
+                      <span class="mono qtype">{l.qtype}</span>
+                      {leadsFor(l).map((k) => (
+                        <span class="tag">{k}</span>
+                      ))}
+                    </span>
+                  </button>
+                </td>
+                <td class="c-dev mono">{l.device}</td>
+                <td class="c-num mono">{l.count.toLocaleString('en-US')}</td>
+                <td class="c-res mono">{l.result}</td>
+                <td class="c-call" data-call>
+                  <span class="muted">-</span>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <p class="empty" data-empty hidden>No name matches every lead you picked. Turn one off.</p>
+    </div>
+
+    <aside id="hunt-panel" class="panel" data-panel tabindex="-1" aria-live="polite" aria-label="Investigation panel">
+      <p class="muted placeholder">
+        Choose a name. You'll see what a hunter would look at, make your call, then compare it with the notes.
+      </p>
+    </aside>
+  </div>
+</section>
+
+<script>
+  import { lookups } from '../data/dns';
+  import {
+    entropy,
+    filterLookups,
+    isLeadKey,
+    labelCount,
+    leads,
+    leadsFor,
+    longestLabel,
+    nameLength,
+    score,
+    verdictLabels,
+    verdicts,
+    type LeadKey,
+    type Lookup,
+    type Verdict,
+  } from '../lib/dns';
+
+  const root = document.querySelector<HTMLElement>('[data-hunt]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const tbody = root.querySelector<HTMLElement>('[data-rows]')!;
+    const count = root.querySelector<HTMLElement>('[data-count]')!;
+    const scoreLine = root.querySelector<HTMLElement>('[data-score]')!;
+    const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+    const panel = root.querySelector<HTMLElement>('[data-panel]')!;
+    const leadButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-lead]')];
+    const rows = new Map<string, HTMLElement>();
+    for (const tr of tbody.querySelectorAll<HTMLElement>('tr[data-id]')) rows.set(tr.dataset.id!, tr);
+    const answers: Record<string, Verdict> = {};
+    const placeholder = [...panel.childNodes].map((n) => n.cloneNode(true));
+
+    const activeLeads = (): LeadKey[] =>
+      leadButtons
+        .filter((b) => b.getAttribute('aria-pressed') === 'true')
+        .map((b) => b.dataset.lead)
+        .filter(isLeadKey);
+
+    function update() {
+      const visible = new Set(filterLookups(lookups, activeLeads()).map((l) => l.id));
+      for (const [id, tr] of rows) tr.hidden = !visible.has(id);
+      count.textContent =
+        visible.size === lookups.length ? `${lookups.length} names` : `${visible.size} of ${lookups.length} names match`;
+      empty.hidden = visible.size > 0;
+    }
+
+    function updateScore() {
+      const s = score(lookups, answers);
+      scoreLine.textContent =
+        s.answered === s.total
+          ? `Done: ${s.correct} of ${s.total} match the notes.`
+          : `Judged ${s.answered} of ${s.total}` +
+            (s.answered ? `, ${s.correct} ${s.correct === 1 ? 'matches' : 'match'} the notes` : '');
+    }
+
+    leadButtons.forEach((b) =>
+      b.addEventListener('click', () => {
+        b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+        update();
+      }),
+    );
+
+    root.querySelector('[data-reset]')?.addEventListener('click', () => {
+      for (const id of Object.keys(answers)) delete answers[id];
+      leadButtons.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      for (const tr of rows.values()) {
+        tr.classList.remove('selected');
+        const cell = tr.querySelector<HTMLElement>('[data-call]')!;
+        cell.replaceChildren(el('span', { class: 'muted', text: '-' }));
+      }
+      panel.replaceChildren(...placeholder.map((n) => n.cloneNode(true)));
+      update();
+      updateScore();
+    });
+
+    tbody.addEventListener('click', (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-open]');
+      if (!button) return;
+      const lookup = lookups.find((l) => l.id === button.dataset.open);
+      if (!lookup) return;
+      for (const tr of rows.values()) tr.classList.toggle('selected', tr.dataset.id === lookup.id);
+      renderPanel(lookup);
+      if (window.matchMedia('(max-width: 60rem)').matches) panel.scrollIntoView({ block: 'start' });
+      panel.focus({ preventScroll: true });
+    });
+
+    function markRow(l: Lookup, choice: Verdict) {
+      const cell = rows.get(l.id)?.querySelector<HTMLElement>('[data-call]');
+      if (!cell) return;
+      const ok = choice === l.answer.verdict;
+      cell.replaceChildren(
+        el('span', { class: ok ? 'mark ok' : 'mark miss', text: `${ok ? '✓' : '✗'} ${verdictLabels[choice]}` }),
+      );
+    }
+
+    function renderPanel(l: Lookup) {
+      panel.replaceChildren();
+      panel.append(el('p', { class: 'mono pid', text: `${l.id}   ${l.qtype} record` }), el('h3', { class: 'mono', text: l.domain }));
+
+      const label = longestLabel(l.domain);
+      const facts = el('dl', { class: 'facts' });
+      const add = (k: string, v: string) => facts.append(el('dt', { text: k }), el('dd', { text: v }));
+      add('Device', l.device);
+      add('Lookups per day', l.count.toLocaleString('en-US'));
+      add('Answer', l.result);
+      add('Length', `${nameLength(l.domain)} characters`);
+      add('Parts', String(labelCount(l.domain)));
+      add('Randomness', `${entropy(label).toFixed(2)} bits per character in "${label}"`);
+      const tripped = leadsFor(l);
+      add('Leads', tripped.length ? tripped.map((k) => leads[k].label).join('; ') : 'none');
+      panel.append(facts);
+      if (l.note) panel.append(el('p', { class: 'note', text: l.note }));
+
+      const call = el('div', { class: 'call' });
+      call.append(el('h4', { text: 'Your call' }));
+      const group = el('div', { class: 'choices' });
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', 'Choose a verdict');
+      const result = el('div', { class: 'result' });
+      const previous = answers[l.id];
+
+      for (const v of verdicts) {
+        const b = el('button', { class: 'btn', text: verdictLabels[v] });
+        b.type = 'button';
+        b.addEventListener('click', () => {
+          answers[l.id] = v;
+          b.classList.add('chosen');
+          b.setAttribute('aria-pressed', 'true');
+          markRow(l, v);
+          updateScore();
+          reveal(v);
+        });
+        group.append(b);
+      }
+      const skip = el('button', { class: 'linkish', text: 'Skip and show the notes' });
+      skip.type = 'button';
+      skip.addEventListener('click', () => reveal(null));
+      call.append(group, skip, result);
+      panel.append(call);
+
+      if (previous) {
+        group.querySelectorAll('button').forEach((b) => {
+          if (b.textContent === verdictLabels[previous]) b.classList.add('chosen');
+        });
+        reveal(previous);
+      }
+
+      function reveal(choice: Verdict | null) {
+        group.querySelectorAll('button').forEach((b) => (b.disabled = true));
+        skip.remove();
+        result.replaceChildren();
+        const right = verdictLabels[l.answer.verdict];
+        if (choice) {
+          const ok = choice === l.answer.verdict;
+          result.append(
+            el('p', {
+              class: ok ? 'verdict ok' : 'verdict miss',
+              text: ok ? `Matches the notes: ${right}.` : `You chose ${verdictLabels[choice]}. The notes say ${right}.`,
+            }),
+          );
+        } else {
+          result.append(el('p', { class: 'verdict', text: `Notes: ${right}.` }));
+        }
+        result.append(el('h4', { text: 'Why' }), el('p', { text: l.answer.why }));
+        result.append(el('h4', { text: 'Next step' }), el('p', { text: l.answer.next }));
+      }
+    }
+  }
+
+  // Everything goes in through textContent, never innerHTML, so nothing in the data
+  // can be read as markup.
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: { class?: string; text?: string } = {}, ...children: Node[]) {
+    const node = document.createElement(tag);
+    if (props.class) node.className = props.class;
+    if (props.text !== undefined) node.textContent = props.text;
+    node.append(...children);
+    return node;
+  }
+</script>
+
+<style>
+  .leads {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+  }
+  .lead {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--signal-dim);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.85rem;
+    min-height: 2.75rem;
+    color: var(--text);
+    text-align: left;
+  }
+  .lead .n {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .lead[aria-pressed='true'] {
+    background: var(--surface-2);
+    border-color: var(--signal);
+    outline: 1px solid var(--signal);
+  }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    margin: 0 0 0.75rem;
+  }
+  .bar p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .score {
+    font-family: var(--mono);
+    font-size: 0.85rem !important;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 60rem) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  td {
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tr.selected td {
+    background: var(--surface-2);
+  }
+  .mono {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+  .open {
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 100%;
+  }
+  .open .domain {
+    overflow-wrap: anywhere;
+  }
+  .open:hover .domain {
+    color: var(--signal);
+    text-decoration: underline;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .qtype,
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--rule);
+    color: var(--muted);
+  }
+  .tag {
+    border-color: var(--signal-dim);
+    color: var(--signal);
+  }
+  .c-dev {
+    white-space: nowrap;
+  }
+  .c-num {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .c-res {
+    overflow-wrap: anywhere;
+  }
+  .c-call {
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+  .c-call :global(.mark.ok) {
+    color: var(--ok);
+  }
+  .c-call :global(.mark.miss) {
+    color: var(--sev-high);
+  }
+  @media (max-width: 40rem) {
+    .c-dev,
+    .c-res {
+      display: none;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  @media (max-width: 60rem) {
+    .panel {
+      position: static;
+      max-height: none;
+    }
+  }
+  .panel :global(.pid) {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 0 0 0.4rem;
+    white-space: pre;
+  }
+  .panel :global(h3) {
+    margin-bottom: 0.9rem;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+  }
+  .panel :global(h4) {
+    font-size: 0.95rem;
+    margin: 1.1rem 0 0.4rem;
+  }
+  .panel :global(.facts) {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 0.9rem;
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .panel :global(dt) {
+    color: var(--muted);
+  }
+  .panel :global(dd) {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .panel :global(.note) {
+    margin: 0.9rem 0 0;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--sev-medium);
+    background: var(--surface-2);
+    font-size: 0.9rem;
+  }
+  .panel :global(.choices) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .panel :global(.choices .btn:disabled) {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .panel :global(.choices .btn.chosen) {
+    opacity: 1;
+    border-color: var(--signal);
+    color: var(--text);
+  }
+  .panel :global(.linkish) {
+    background: none;
+    border: 0;
+    padding: 0.5rem 0;
+    color: var(--signal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-size: 0.9rem;
+  }
+  .panel :global(.verdict) {
+    margin: 1rem 0 0;
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--signal);
+    background: var(--surface-2);
+  }
+  .panel :global(.verdict.ok) {
+    border-left-color: var(--ok);
+  }
+  .panel :global(.verdict.miss) {
+    border-left-color: var(--sev-high);
+  }
+  .empty {
+    color: var(--muted);
+    padding: 1rem 0;
+  }
+</style>

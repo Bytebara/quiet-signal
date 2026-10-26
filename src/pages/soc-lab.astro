@@ -21,6 +21,11 @@ import { withBase } from '../config/site';
     </span>
   </div>
 
+  <p class="more prose">
+    Another exercise: <a href={withBase('/dns-hunt/')}>DNS hunt</a>, finding the suspicious names in a day of
+    home-network lookups.
+  </p>
+
   <AlertDashboard />
 
   <details class="how">
@@ -37,6 +42,9 @@ import { withBase } from '../config/site';
 </Base>
 
 <style>
+  .more {
+    margin: 0 0 1.25rem;
+  }
   .how {
     margin-top: 2.5rem;
     border-top: 1px solid var(--rule);

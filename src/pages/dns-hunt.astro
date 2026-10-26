@@ -1,0 +1,92 @@
+---
+import Base from '../layouts/Base.astro';
+import DnsHunt from '../components/DnsHunt.astro';
+import { withBase } from '../config/site';
+---
+
+<Base
+  title="DNS hunt"
+  description="Simulated DNS threat hunt on synthetic Pi-hole data. Use hunting leads, investigate each name, judge it, compare with the notes."
+  wide
+>
+  <p class="path">./dns-hunt --simulated</p>
+  <h1>DNS hunt</h1>
+  <p class="lead">
+    One day of DNS lookups from a made-up home network, as a filter like Pi-hole would log them. Every device asks DNS
+    before it talks to anything, so these names show what each device contacted. Most are routine. A few are not.
+  </p>
+
+  <div class="sim-banner" role="note">
+    <strong>Simulated environment</strong>
+    <span>
+      Every name ends in .example or .test (reserved so they can never be real sites) and every address comes from
+      ranges reserved for documentation. The scenario is modeled on hunting my own lab's Pi-hole logs; none of the data
+      is from it.
+    </span>
+  </div>
+
+  <h2 class="how-title">How to hunt</h2>
+  <ol class="steps prose">
+    <li>Turn on a <strong>lead</strong>, such as "Random-looking part". Hunters start with simple rules like these.</li>
+    <li>Open a name. Read the device, how often it was looked up, the answer and any timing note.</li>
+    <li>
+      Judge it: <strong>Normal</strong>, <strong>Telemetry or ads</strong> (unwanted, not an attack), or
+      <strong>Suspicious</strong> (needs investigation). Then read why.
+    </li>
+  </ol>
+  <p class="prose muted">
+    Each lead also catches harmless names. Notice which ones, and look for devices where several signs line up.
+  </p>
+
+  <DnsHunt />
+
+  <details class="how">
+    <summary>What the measurements mean</summary>
+    <div class="prose">
+      <p>
+        <strong>Length and parts.</strong> Long names with many dot-separated parts can carry hidden data, but cloud
+        services and Windows use them too.
+      </p>
+      <p>
+        <strong>Randomness</strong> is Shannon entropy of the longest part, in bits per character. Ordinary words land
+        around 2.5 to 3; machine-generated strings climb above 3.4. Server IDs in content networks are random too, so
+        check the parent name.
+      </p>
+      <p>
+        <strong>NXDOMAIN</strong> means the name doesn't exist. One failure is a typo; dozens of different random names
+        failing from one device is a pattern.
+      </p>
+      <p>
+        <strong>Per day.</strong> Exact, round-the-clock regularity suggests a program on a timer. Telemetry does this
+        too; what matters is which device, to whom, and whether the name is honest about it.
+      </p>
+      <p>
+        The data and the scoring logic are described on the <a href={withBase('/projects/dns-hunt/')}>project page</a>.
+      </p>
+    </div>
+  </details>
+</Base>
+
+<style>
+  .how-title {
+    font-size: 1.1rem;
+    margin: 1.75rem 0 0.5rem;
+  }
+  .steps {
+    padding-left: 1.25rem;
+    margin: 0 0 0.5rem;
+  }
+  .steps li {
+    margin: 0.3rem 0;
+  }
+  .how {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .how summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.5rem 0;
+  }
+</style>

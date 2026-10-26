@@ -2,7 +2,7 @@
 title: Guided log investigations
 summary: Step-through scenarios where the reader flags suspicious log lines and checks their reasoning against analyst notes and a Sigma-style rule.
 status: planned
-order: 3
+order: 4
 tags: [log analysis, detection, incident response]
 tools: [TypeScript, Sigma]
 ---

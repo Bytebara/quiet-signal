@@ -2,7 +2,7 @@
 title: IOC extractor and defanger
 summary: Paste a report or email and get the IP addresses, domains, URLs and file hashes pulled out, validated and defanged for safe sharing.
 status: planned
-order: 4
+order: 5
 tags: [threat intelligence, IOC, defensive tooling]
 tools: [TypeScript]
 ---

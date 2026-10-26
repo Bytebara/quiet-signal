@@ -2,7 +2,7 @@
 title: Python alert-enrichment script
 summary: A command-line script that reads exported alerts, looks up file hashes, and writes a short triage summary for each one.
 status: planned
-order: 5
+order: 6
 tags: [Python, automation, threat intelligence]
 tools: [Python, VirusTotal API]
 ---
