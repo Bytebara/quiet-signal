@@ -8,7 +8,7 @@ export const site = {
     'Portfolio of an entry-level security operations candidate: skills, experience, education and hands-on lab work, with every claim labeled by evidence.',
   // Deliberately no email, phone, location, or social links.
   colophon:
-    'Built with Astro as a static site. No cookies, analytics, trackers or forms. Developed with AI assistance and reviewed by the owner.',
+    'Built with Astro as a static site. No cookies, analytics, trackers or forms.',
   // Leave as null. Only after you add an approved, PII-reviewed file to public/
   // set this to its file name, e.g. 'resume.pdf'. See README > "Adding a resume download".
   resumeFile: null as string | null,
