@@ -36,17 +36,19 @@ import { withBase } from '../config/site';
 </Base>
 
 <style>
+  /* Columns instead of a grid: each group sits right under the one above it,
+     so a short group never leaves a gap next to a tall one. */
   .groups {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-    gap: 0 3rem;
+    column-width: 22rem;
+    column-count: 2;
+    column-gap: 3rem;
   }
-  @media (max-width: 30rem) {
-    .groups {
-      grid-template-columns: 1fr;
-    }
+  section {
+    break-inside: avoid;
+    padding-bottom: 1.5rem;
   }
   h2 {
+    margin-top: 0;
     font-size: 1.15rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--rule);
