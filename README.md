@@ -49,4 +49,4 @@ Everything else (project layout, common edits, publishing, the privacy checklist
 
 ---
 
-Published under a project name, with no personal contact details by design. Developed with AI assistance and reviewed by me.
+Published under a project name, with no personal contact details by design.
