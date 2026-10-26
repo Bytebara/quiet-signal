@@ -3,10 +3,10 @@
 
 export const site = {
   name: 'Quiet Signal',
-  role: 'Security operations, detection and automation',
+  role: 'Cloud security engineering, in progress',
   description:
-    'Portfolio of an entry-level security operations candidate: skills, experience, education and hands-on lab work, with every claim labeled by evidence.',
-  // Deliberately no email, phone, location, or social links.
+    'Portfolio of an entry-level candidate working toward cloud security engineering: skills, experience, education and hands-on lab work, with every claim labeled by evidence.',
+  // Deliberately no email, phone or location. The only outside link is the alias GitHub account (on the home page).
   colophon:
     'Built with Astro as a static site. No cookies, analytics, trackers or forms.',
   // Leave as null. Only after you add an approved, PII-reviewed file to public/
